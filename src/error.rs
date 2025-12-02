@@ -40,6 +40,21 @@ pub enum VersionError {
 
     #[error("Too many components")]
     ExtraComponents,
+
+    #[error("Unrecognized version format: {0}")]
+    UnknownVersionFormat(String),
+}
+
+#[derive(Debug, Clone, Error)]
+pub enum HandleError {
+    #[error("Invalid Minecraft Version: {0}")]
+    InvalidVersion(String),
+
+    #[error("Invalid server root directory: {0}")]
+    InvalidDirectory(String),
+
+    #[error("Invalid relative JAR path: {0}")]
+    InvalidPathJAR(String),
 }
 
 type Result<T> = std::result::Result<T, Error>;

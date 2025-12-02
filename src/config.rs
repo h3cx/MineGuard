@@ -108,3 +108,19 @@ impl FromStr for Snapshot {
         Ok(Self { year, week, build })
     }
 }
+
+impl FromStr for MinecraftVersion {
+    type Err = VersionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(ver) = Version::from_str(s) {
+            return Ok(MinecraftVersion::Release(ver));
+        }
+
+        if let Ok(snap) = Snapshot::from_str(s) {
+            return Ok(MinecraftVersion::Snapshot(snap));
+        }
+
+        Err(VersionError::UnknownVersionFormat(s.to_string()))
+    }
+}
