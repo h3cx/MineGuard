@@ -1,0 +1,16 @@
+[package]
+name = "mineguard"
+version = "0.1.0"
+edition = "2024"
+description = "Opinionated Minecraft server supervisor engine built primarily for RustyMine"
+readme = "README.md"
+homepage = "https://mineguard.h3cx.dev"
+repository = "https://github.com/H3ct0r55/MineGuard"
+license = "MIT"
+# publish set to false during development
+publish = false
+
+[dependencies]
+thiserror = "2.0.17"
+tokio = { version = "1.48.0", features = ["process", "rt-multi-thread", "macros"] }
+tokio-stream = "0.1.17"
