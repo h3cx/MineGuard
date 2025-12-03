@@ -10,8 +10,18 @@ license = "MIT"
 # publish set to false during development
 publish = false
 
+[features]
+default = ["core"]
+# Core runtime requirements for the currently implemented functionality.
+core = ["dep:thiserror", "dep:tokio", "dep:tokio-stream", "dep:tokio-util"]
+# Placeholder for upcoming event-driven functionality.
+events = []
+# Add new feature groups here; attach their optional dependencies to the relevant feature list.
+
 [dependencies]
-thiserror = "2.0.17"
-tokio = { version = "1.48.0", features = ["process", "rt-multi-thread", "macros", "io-std", "io-util"] }
-tokio-stream = { version = "0.1.17", features = ["full", "io-util", "signal", "tokio-util"] }
-tokio-util = { version = "0.7.17", features = ["full"] }
+thiserror = { version = "2.0.17", optional = true }
+# Core async runtime and utilities
+# Add new feature-specific optional dependencies alongside the relevant feature entry above.
+tokio = { version = "1.48.0", features = ["process", "rt-multi-thread", "macros", "io-std", "io-util"], optional = true }
+tokio-stream = { version = "0.1.17", features = ["full", "io-util", "signal", "tokio-util"], optional = true }
+tokio-util = { version = "0.7.17", features = ["full"], optional = true }
