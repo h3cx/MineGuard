@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Display, write},
+    fmt::{self, Display},
     str::FromStr,
 };
 
@@ -149,6 +149,13 @@ impl StreamLine {
         Self {
             line: line.into(),
             source: StreamSource::Stdout,
+        }
+    }
+
+    pub fn stderr<S: Into<String>>(line: S) -> Self {
+        Self {
+            line: line.into(),
+            source: StreamSource::Stderr,
         }
     }
 }
