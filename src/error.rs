@@ -61,6 +61,9 @@ pub enum HandleError {
 pub enum SubscribeError {
     #[error("No stdout found")]
     NoStdout,
+
+    #[error("No stderr found")]
+    NoStderr,
 }
 
 #[derive(Debug, Clone, Error)]
@@ -82,6 +85,9 @@ pub enum ServerError {
 
     #[error("Failed to access child stdin pipe")]
     NoStdinPipe,
+
+    #[error("Failed to access child stderr pipe")]
+    NoStderrPipe,
 
     #[error("Failed to write to stdin")]
     StdinWriteFailed,
