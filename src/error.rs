@@ -63,4 +63,28 @@ pub enum SubscribeError {
     NoStdout,
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum ServerError {
+    #[error("Server is already running")]
+    AlreadyRunning,
+
+    #[error("Server is not running")]
+    NotRunning,
+
+    #[error("Server crashed early")]
+    EarlyCrash,
+
+    #[error("Failed to run java command")]
+    CommandFailed,
+
+    #[error("Failed to access child stdout pipe")]
+    NoStdoutPipe,
+
+    #[error("Failed to access child stdin pipe")]
+    NoStdinPipe,
+
+    #[error("Failed to write to stdin")]
+    StdinWriteFailed,
+}
+
 type Result<T> = std::result::Result<T, Error>;

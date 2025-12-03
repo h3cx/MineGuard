@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Display},
+    fmt::{self, Display, write},
     str::FromStr,
 };
 
@@ -31,15 +31,15 @@ pub enum MinecraftVersion {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StreamType {
+pub enum StreamSource {
     Stdout,
     Stderr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StreamLine {
-    source: StreamType,
-    val: String,
+    line: String,
+    source: StreamSource,
 }
 
 impl Display for Version {
@@ -134,5 +134,27 @@ impl FromStr for MinecraftVersion {
         }
 
         Err(VersionError::UnknownVersionFormat(s.to_string()))
+    }
+}
+
+impl StreamLine {
+    pub fn new<S: Into<String>>(line: S, source: StreamSource) -> Self {
+        Self {
+            line: line.into(),
+            source,
+        }
+    }
+
+    pub fn stdout<S: Into<String>>(line: S) -> Self {
+        Self {
+            line: line.into(),
+            source: StreamSource::Stdout,
+        }
+    }
+}
+
+impl Display for StreamLine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.line)
     }
 }
