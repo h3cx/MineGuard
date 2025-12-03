@@ -92,5 +92,3 @@ pub enum ServerError {
     #[error("Failed to write to stdin")]
     StdinWriteFailed,
 }
-
-type Result<T> = std::result::Result<T, Error>;

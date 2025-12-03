@@ -5,6 +5,8 @@ use std::fmt::{self, Display};
 pub enum StreamSource {
     Stdout,
     Stderr,
+    #[cfg(feature = "events")]
+    Event,
 }
 
 /// Captures a single line of process output along with its origin stream.
@@ -13,6 +15,12 @@ pub struct StreamLine {
     line: String,
     source: StreamSource,
 }
+
+#[cfg(feature = "events")]
+pub struct InstanceEvent {}
+
+#[cfg(feature = "events")]
+pub enum Events {}
 
 impl StreamLine {
     pub fn new<S: Into<String>>(line: S, source: StreamSource) -> Self {

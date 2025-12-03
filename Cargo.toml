@@ -11,7 +11,7 @@ license = "MIT"
 publish = false
 
 [features]
-default = ["core"]
+default = ["core", "events"]
 # Core runtime requirements for the currently implemented functionality.
 core = ["dep:thiserror", "dep:tokio", "dep:tokio-stream", "dep:tokio-util"]
 # Placeholder for upcoming event-driven functionality.
