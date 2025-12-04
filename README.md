@@ -7,7 +7,7 @@
 ---
 
 <div align="center">
-<a href="./LICENSE">MIT License</a> • H3cx  
+<a href="./LICENSE">MIT License</a> • h3cx  
   
 Built on coffee, late nights, and a fully up-to-date Arch install (btw).
 </div>
