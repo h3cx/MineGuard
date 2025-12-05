@@ -146,22 +146,28 @@ impl Display for LogLevel {
 
 impl StreamLine {
     pub fn new<S: Into<String>>(line: S, source: StreamSource) -> Self {
-        Self {
-            line: line.into(),
-            source,
-        }
+        let line = line.into();
+        let re = Regex::new(r#"^\[[^\]]*\]\s*\[[^\]]*\]:\s*"#).unwrap();
+        let line = re.replace(&line, "").to_string();
+        Self { line, source }
     }
 
     pub fn stdout<S: Into<String>>(line: S) -> Self {
+        let line = line.into();
+        let re = Regex::new(r#"^\[[^\]]*\]\s*\[[^\]]*\]:\s*"#).unwrap();
+        let line = re.replace(&line, "").to_string();
         Self {
-            line: line.into(),
+            line,
             source: StreamSource::Stdout,
         }
     }
 
     pub fn stderr<S: Into<String>>(line: S) -> Self {
+        let line = line.into();
+        let re = Regex::new(r#"^\[[^\]]*\]\s*\[[^\]]*\]:\s*"#).unwrap();
+        let line = re.replace(&line, "").to_string();
         Self {
-            line: line.into(),
+            line,
             source: StreamSource::Stderr,
         }
     }
@@ -233,13 +239,13 @@ impl Display for InstanceEvent {
         match self.payload.clone() {
             EventPayload::StdLine { line } => {
                 let full = format!("{}{}", head, line);
-                write!(f, "{}", full)
+                write!(f, "{}\n", full)
             }
 
             #[cfg(feature = "events")]
             EventPayload::StateChange { old, new } => {
                 let full = format!("{}State changed: {:?} -> {:?}", head, old, new);
-                write!(f, "{}", full)
+                write!(f, "{}\n", full)
             }
         }
     }

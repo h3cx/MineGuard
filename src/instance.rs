@@ -1,10 +1,11 @@
-use std::{path::PathBuf, process::Stdio, sync::Arc};
+use std::{path::PathBuf, process::Stdio, sync::Arc, time::Duration};
 
 use chrono::Utc;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
     process::{self, Child},
     sync::{RwLock, broadcast, mpsc},
+    time::sleep,
 };
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::sync::CancellationToken;
@@ -165,7 +166,7 @@ impl InstanceHandle {
             payload: EventPayload::StateChange { old, new },
         };
 
-        self.internal_tx.send(event);
+        _ = self.internal_tx.send(event).await;
     }
 
     fn build_start_command(&self) -> process::Command {
@@ -202,6 +203,8 @@ impl InstanceHandle {
 
         let stdout_status = self.status.clone();
         let stderr_status = self.status.clone();
+        let internal_tx1 = self.internal_tx.clone();
+        let internal_tx2 = self.internal_tx.clone();
 
         tokio::spawn(async move {
             let mut stdout_reader = BufReader::new(stdout).lines();
@@ -212,12 +215,24 @@ impl InstanceHandle {
                     }
                     _ => {
                         let status_guard = stdout_status.read().await;
-                        if *status_guard != InstanceStatus::Killing
-                            || *status_guard != InstanceStatus::Stopping
-                        {
+                        let state = status_guard.clone();
+                        if state == InstanceStatus::Running && state == InstanceStatus::Starting {
+                            let old = status_guard.clone();
                             drop(status_guard);
                             let mut status = stdout_status.write().await;
                             *status = InstanceStatus::Crashed;
+                            let event = InstanceEvent {
+                                id: Uuid::new_v4(),
+
+                                timestamp: Utc::now(),
+
+                                payload: EventPayload::StateChange {
+                                    old,
+                                    new: status.clone(),
+                                },
+                            };
+
+                            _ = internal_tx1.send(event).await;
                             drop(status);
                             break;
                         }
@@ -236,12 +251,24 @@ impl InstanceHandle {
                     }
                     _ => {
                         let status_guard = stderr_status.read().await;
-                        if *status_guard != InstanceStatus::Killing
-                            || *status_guard != InstanceStatus::Stopping
-                        {
+                        let state = status_guard.clone();
+                        if state == InstanceStatus::Running && state == InstanceStatus::Starting {
+                            let old = status_guard.clone();
                             drop(status_guard);
                             let mut status = stderr_status.write().await;
                             *status = InstanceStatus::Crashed;
+                            let event = InstanceEvent {
+                                id: Uuid::new_v4(),
+
+                                timestamp: Utc::now(),
+
+                                payload: EventPayload::StateChange {
+                                    old,
+                                    new: status.clone(),
+                                },
+                            };
+
+                            _ = internal_tx2.send(event).await;
                             drop(status);
                             break;
                         }
@@ -279,8 +306,30 @@ impl InstanceHandle {
         let stdout_stream = self
             .subscribe(StreamSource::Stdout)
             .map_err(|_| ServerError::NoStdoutPipe)?;
-        let shutdown = self.shutdown.clone();
+        let shutdown1 = self.shutdown.clone();
+        let shutdown2 = self.shutdown.clone();
         let _event_tx = self.events_tx.clone();
+
+        if let Some(mut internal_rx) = self.internal_rx.take() {
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = shutdown1.cancelled() => {
+                            break;
+                        }
+
+                        maybe_event = internal_rx.recv() => {
+                            match maybe_event {
+                                Some(event) => {
+                                    println!("event: {}", event);
+                                }
+                                _ => (),
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         #[cfg(feature = "mc-vanilla")]
         if self.data.mc_type == MinecraftType::Vanilla {
@@ -289,7 +338,7 @@ impl InstanceHandle {
 
                 loop {
                     tokio::select! {
-                        _ = shutdown.cancelled() => {
+                        _ = shutdown2.cancelled() => {
                             break;
                         }
                         line = rx.next() => {
@@ -312,10 +361,10 @@ impl InstanceHandle {
 
             child.kill().await.map_err(|_| ServerError::CommandFailed)?;
 
+            self.transition_status(InstanceStatus::Killed).await;
+            sleep(Duration::from_secs(1));
             self.shutdown.cancel();
             self.child = None;
-
-            self.transition_status(InstanceStatus::Killed).await;
             Ok(())
         } else {
             Err(ServerError::NotRunning)
@@ -329,10 +378,11 @@ impl InstanceHandle {
             _ = self.send_command("stop").await;
             let mut child = child_arc.write().await;
             child.wait().await.map_err(|_| ServerError::CommandFailed)?;
-            self.shutdown.cancel();
-            self.child = None;
 
             self.transition_status(InstanceStatus::Stopped).await;
+            sleep(Duration::from_secs(1));
+            self.shutdown.cancel();
+            self.child = None;
             Ok(())
         } else {
             Err(ServerError::NotRunning)
