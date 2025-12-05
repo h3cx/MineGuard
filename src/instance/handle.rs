@@ -7,6 +7,7 @@ use tokio::{
     sync::{RwLock, broadcast, mpsc},
     time::sleep,
 };
+use tokio_stream::StreamExt;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -18,26 +19,7 @@ use crate::{
     error::{HandleError, ServerError, SubscribeError},
 };
 
-use tokio_stream::StreamExt;
-
-#[derive(Debug, Clone)]
-pub struct InstanceData {
-    pub root_dir: PathBuf,
-    pub jar_path: PathBuf,
-    pub mc_version: MinecraftVersion,
-    pub mc_type: MinecraftType,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InstanceStatus {
-    Starting,
-    Running,
-    Stopping,
-    Stopped,
-    Crashed,
-    Killing,
-    Killed,
-}
+use super::{InstanceData, InstanceStatus};
 
 #[derive(Debug)]
 pub struct InstanceHandle {
