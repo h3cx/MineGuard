@@ -15,14 +15,14 @@ default = ["core", "events", "mc-vanilla"]
 # Core runtime requirements for the currently implemented functionality.
 core = ["dep:thiserror", "dep:tokio", "dep:tokio-stream", "dep:tokio-util"]
 # Placeholder for upcoming event-driven functionality.
-events = ["dep:uuid"]
+events = ["dep:uuid", "dep:chrono", "dep:regex"]
 
 mc-vanilla = []
 # Add new feature groups here; attach their optional dependencies to the relevant feature list.
 
 [dependencies]
-chrono = "0.4.42"
-regex = "1.12.2"
+chrono = {version = "0.4.42", optional = true} 
+regex = {version = "1.12.2", optional = true} 
 thiserror = { version = "2.0.17", optional = true }
 # Core async runtime and utilities
 # Add new feature-specific optional dependencies alongside the relevant feature entry above.

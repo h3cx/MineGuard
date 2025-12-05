@@ -280,12 +280,10 @@ impl InstanceHandle {
             .subscribe(StreamSource::Stdout)
             .map_err(|_| ServerError::NoStdoutPipe)?;
         let shutdown = self.shutdown.clone();
-        // TODO: Stream events!!!!
         let _event_tx = self.events_tx.clone();
 
         #[cfg(feature = "mc-vanilla")]
         if self.data.mc_type == MinecraftType::Vanilla {
-            use crate::config::LogMeta;
             tokio::spawn(async move {
                 let mut rx = stdout_stream;
 
