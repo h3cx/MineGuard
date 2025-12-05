@@ -4,9 +4,7 @@ use regex::Regex;
 pub fn extract_timestamp(input: &str) -> Option<DateTime<Utc>> {
     let re = Regex::new(r"\[(.*?)\]").unwrap();
     let time_s = re.captures(input).map(|v| v[1].to_string());
-    if time_s.is_none() {
-        return None;
-    }
+    time_s.as_ref()?;
     let time = NaiveTime::parse_from_str(&time_s.unwrap(), "%H:%M:%S").ok()?;
 
     let today = Local::now().date_naive();

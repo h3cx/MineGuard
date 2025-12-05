@@ -14,7 +14,7 @@ use uuid::Uuid;
 #[cfg(feature = "events")]
 use crate::config::stream::InstanceEvent;
 use crate::{
-    config::{MinecraftType, MinecraftVersion, StreamLine, StreamSource, stream::EventPayload},
+    config::{MinecraftType, MinecraftVersion, StreamSource, stream::EventPayload},
     error::{HandleError, ServerError, SubscribeError},
 };
 
@@ -319,11 +319,8 @@ impl InstanceHandle {
                         }
 
                         maybe_event = internal_rx.recv() => {
-                            match maybe_event {
-                                Some(event) => {
-                                    println!("event: {}", event);
-                                }
-                                _ => (),
+                            if let Some(event) = maybe_event {
+                                println!("event: {}", event);
                             }
                         }
                     }
@@ -362,7 +359,7 @@ impl InstanceHandle {
             child.kill().await.map_err(|_| ServerError::CommandFailed)?;
 
             self.transition_status(InstanceStatus::Killed).await;
-            sleep(Duration::from_secs(1));
+            sleep(Duration::from_secs(1)).await;
             self.shutdown.cancel();
             self.child = None;
             Ok(())
@@ -380,7 +377,7 @@ impl InstanceHandle {
             child.wait().await.map_err(|_| ServerError::CommandFailed)?;
 
             self.transition_status(InstanceStatus::Stopped).await;
-            sleep(Duration::from_secs(1));
+            sleep(Duration::from_secs(1)).await;
             self.shutdown.cancel();
             self.child = None;
             Ok(())

@@ -180,9 +180,7 @@ impl StreamLine {
         let input = self.line.as_str();
         let re = Regex::new(r"\[(.*?)\]").unwrap();
         let time_s = re.captures(input).map(|v| v[1].to_string());
-        if time_s.is_none() {
-            return None;
-        }
+        time_s.as_ref()?;
         let time = NaiveTime::parse_from_str(&time_s.unwrap(), "%H:%M:%S").ok()?;
 
         let today = Local::now().date_naive();
@@ -233,19 +231,18 @@ impl Display for InstanceEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let head = format!(
             "UUID: {}\nTimestamp:{}\nPayload:\n",
-            self.id.to_string(),
-            self.timestamp.to_string()
+            self.id, self.timestamp
         );
         match self.payload.clone() {
             EventPayload::StdLine { line } => {
                 let full = format!("{}{}", head, line);
-                write!(f, "{}\n", full)
+                writeln!(f, "{}", full)
             }
 
             #[cfg(feature = "events")]
             EventPayload::StateChange { old, new } => {
                 let full = format!("{}State changed: {:?} -> {:?}", head, old, new);
-                write!(f, "{}\n", full)
+                writeln!(f, "{}", full)
             }
         }
     }
