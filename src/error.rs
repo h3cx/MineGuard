@@ -91,6 +91,11 @@ pub enum ServerError {
 
     #[error("Failed to write to stdin")]
     StdinWriteFailed,
+
+    #[error("Failed to open eula.txt")]
+    NoEULA,
+    #[error("Failed to write eula.txt")]
+    WriteEULAFailed,
 }
 
 #[cfg(feature = "events")]
