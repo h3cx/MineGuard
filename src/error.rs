@@ -96,6 +96,9 @@ pub enum ServerError {
     NoEULA,
     #[error("Failed to write eula.txt")]
     WriteEULAFailed,
+
+    #[error("File io error")]
+    FileIO,
 }
 
 #[cfg(feature = "events")]

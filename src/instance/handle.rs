@@ -20,6 +20,7 @@ use crate::{
         stream::{EventPayload, InternalEvent},
     },
     error::{HandleError, ServerError, SubscribeError},
+    server::domain::MineGuardConfig,
 };
 
 use super::{InstanceData, InstanceStatus};
@@ -44,6 +45,14 @@ pub struct InstanceHandle {
 }
 
 impl InstanceHandle {
+    pub fn new_with_config(config: MineGuardConfig) -> Result<Self, HandleError> {
+        InstanceHandle::new_with_params(
+            config.server_dir,
+            config.jar_path,
+            config.mc_version,
+            config.mc_type,
+        )
+    }
     pub fn new_with_params(
         root_dir: PathBuf,
         jar_path: PathBuf,

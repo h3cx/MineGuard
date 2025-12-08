@@ -3,18 +3,19 @@ use std::{
     str::FromStr,
 };
 
+use serde::{Deserialize, Serialize};
 use tokio::sync::watch;
 
 use crate::error::VersionError;
 
 /// Identifies the type of Minecraft distribution supported by the configuration.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum MinecraftType {
     Vanilla,
 }
 
 /// Semantic release version parsed from strings like `1.20.4`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Version {
     pub major: u32,
     pub minor: u32,
@@ -22,7 +23,7 @@ pub struct Version {
 }
 
 /// Snapshot version parsed from strings like `23w13b`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Snapshot {
     pub year: u32,
     pub week: u32,
@@ -30,7 +31,7 @@ pub struct Snapshot {
 }
 
 /// Enum covering both release and snapshot Minecraft version formats.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum MinecraftVersion {
     Release(Version),
     Snapshot(Snapshot),
