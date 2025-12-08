@@ -11,6 +11,7 @@ pub struct LogMeta {
 }
 
 #[cfg(feature = "mc-vanilla")]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum LogLevel {
     Info,
     Warn,

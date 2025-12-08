@@ -15,7 +15,10 @@ use uuid::Uuid;
 #[cfg(feature = "events")]
 use crate::config::stream::InstanceEvent;
 use crate::{
-    config::{MinecraftType, MinecraftVersion, StreamSource, stream::EventPayload},
+    config::{
+        MinecraftType, MinecraftVersion, StreamSource,
+        stream::{EventPayload, InternalEvent},
+    },
     error::{HandleError, ServerError, SubscribeError},
 };
 
@@ -30,13 +33,14 @@ pub struct InstanceHandle {
     #[cfg(feature = "events")]
     events_tx: broadcast::Sender<InstanceEvent>,
     #[cfg(feature = "events")]
-    internal_tx: mpsc::Sender<InstanceEvent>,
+    internal_events_tx: mpsc::Sender<InstanceEvent>,
     #[cfg(feature = "events")]
-    internal_rx: Option<mpsc::Receiver<InstanceEvent>>,
+    internal_events_rx: Option<mpsc::Receiver<InstanceEvent>>,
     stdin_tx: mpsc::Sender<String>,
     stdin_rx: Option<mpsc::Receiver<String>>,
     child: Option<Arc<RwLock<Child>>>,
     shutdown: CancellationToken,
+    internal_bus_tx: broadcast::Sender<InternalEvent>,
 }
 
 impl InstanceHandle {
@@ -82,13 +86,14 @@ impl InstanceHandle {
             #[cfg(feature = "events")]
             events_tx: broadcast::Sender::new(2048),
             #[cfg(feature = "events")]
-            internal_tx,
+            internal_events_tx: internal_tx,
             #[cfg(feature = "events")]
-            internal_rx: Some(internal_rx),
+            internal_events_rx: Some(internal_rx),
             stdin_tx,
             stdin_rx: Some(stdin_rx),
             child: None,
             shutdown: CancellationToken::new(),
+            internal_bus_tx: broadcast::Sender::new(2048),
         })
     }
 
@@ -108,6 +113,7 @@ impl InstanceHandle {
 
     pub async fn start(&mut self) -> Result<(), ServerError> {
         self.validate_start_parameters().await?;
+        self.setup_loopback()?;
 
         self.transition_status(InstanceStatus::Starting).await;
 
@@ -116,9 +122,22 @@ impl InstanceHandle {
 
         self.setup_stream_pumps(child)?;
 
-        self.transition_status(InstanceStatus::Running).await;
-
         self.setup_parser()?;
+
+        let mut rx = self.internal_bus_tx.subscribe();
+
+        loop {
+            match rx.recv().await {
+                Ok(event) => {
+                    if event == InternalEvent::ServerStarted {
+                        self.transition_status(InstanceStatus::Running).await;
+                        break;
+                    }
+                    continue;
+                }
+                _ => continue,
+            }
+        }
 
         Ok(())
     }
@@ -150,7 +169,7 @@ impl InstanceHandle {
             payload: EventPayload::StateChange { old, new },
         };
 
-        _ = self.internal_tx.send(event).await;
+        _ = self.internal_events_tx.send(event).await;
     }
 
     fn build_start_command(&self) -> process::Command {
@@ -187,8 +206,8 @@ impl InstanceHandle {
 
         let stdout_status = self.status.clone();
         let stderr_status = self.status.clone();
-        let internal_tx1 = self.internal_tx.clone();
-        let internal_tx2 = self.internal_tx.clone();
+        let internal_tx1 = self.internal_events_tx.clone();
+        let internal_tx2 = self.internal_events_tx.clone();
 
         tokio::spawn(async move {
             let mut stdout_reader = BufReader::new(stdout).lines();
@@ -286,17 +305,14 @@ impl InstanceHandle {
     }
 
     #[cfg(all(feature = "events", any(feature = "mc-vanilla")))]
-    fn setup_parser(&mut self) -> Result<(), ServerError> {
-        let stdout_stream = self
-            .subscribe(StreamSource::Stdout)
-            .map_err(|_| ServerError::NoStdoutPipe)?;
+    fn setup_loopback(&mut self) -> Result<(), ServerError> {
         let shutdown1 = self.shutdown.clone();
-        let shutdown2 = self.shutdown.clone();
-        let event_tx = self.events_tx.clone();
 
-        if let Some(mut internal_rx) = self.internal_rx.take() {
+        let event_tx1 = self.events_tx.clone();
+        //internal mpsc to broadcast loopback
+        if let Some(mut internal_rx) = self.internal_events_rx.take() {
             tokio::spawn(async move {
-                let tx = event_tx;
+                let tx = event_tx1;
                 loop {
                     tokio::select! {
                         _ = shutdown1.cancelled() => {
@@ -312,20 +328,50 @@ impl InstanceHandle {
                 }
             });
         }
+        Ok(())
+    }
+
+    #[cfg(all(feature = "events", any(feature = "mc-vanilla")))]
+    fn setup_parser(&mut self) -> Result<(), ServerError> {
+        use crate::config::LogMeta;
+
+        let stdout_stream = self
+            .subscribe(StreamSource::Stdout)
+            .map_err(|_| ServerError::NoStdoutPipe)?;
+        let shutdown2 = self.shutdown.clone();
+        let bus_tx = self.internal_bus_tx.clone();
 
         #[cfg(feature = "mc-vanilla")]
         if self.data.mc_type == MinecraftType::Vanilla {
             tokio::spawn(async move {
                 let mut rx = stdout_stream;
+                let tx = bus_tx;
 
                 loop {
                     tokio::select! {
                         _ = shutdown2.cancelled() => {
                             break;
                         }
-                        line = rx.next() => {
-                            if let Some(Ok(val)) = line {
-                                // TODO: Call parser
+                        next_line = rx.next() => {
+                            if let Some(Ok(val)) = next_line {
+                                let event_line = match val.payload {
+                                    EventPayload::StdLine{line} => {
+                                        line
+                                    },
+                                    _ => continue,
+                                };
+
+                                let meta = match LogMeta::new(event_line.line) {
+                                    Ok(Some(log_meta)) => {
+                                        log_meta
+                                    },
+                                    _ => continue,
+                                };
+
+                                match meta.parse_event() {
+                                    Ok(Some(event)) => _ = tx.send(event),
+                                    _ => continue,
+                                }
                             }
                         }
                     }

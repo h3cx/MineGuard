@@ -15,8 +15,8 @@ pub enum StreamSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StreamLine {
-    line: String,
-    source: StreamSource,
+    pub line: String,
+    pub source: StreamSource,
 }
 
 impl StreamLine {
@@ -29,8 +29,6 @@ impl StreamLine {
 
     pub fn stdout<S: Into<String>>(line: S) -> Self {
         let line = line.into();
-        let re = Regex::new(r#"^\[[^\]]*\]\s*\[[^\]]*\]:\s*"#).unwrap();
-        let line = re.replace(&line, "").to_string();
         Self {
             line,
             source: StreamSource::Stdout,
@@ -39,8 +37,6 @@ impl StreamLine {
 
     pub fn stderr<S: Into<String>>(line: S) -> Self {
         let line = line.into();
-        let re = Regex::new(r#"^\[[^\]]*\]\s*\[[^\]]*\]:\s*"#).unwrap();
-        let line = re.replace(&line, "").to_string();
         Self {
             line,
             source: StreamSource::Stderr,

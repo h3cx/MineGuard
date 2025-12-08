@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use uuid::Uuid;
+use uuid::{Uuid, timestamp};
 
 use crate::instance::InstanceStatus;
 
@@ -28,6 +28,11 @@ pub struct InstanceEvent {
     pub payload: EventPayload,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InternalEvent {
+    ServerStarted,
+}
+
 impl InstanceEvent {
     pub fn stdout<S: Into<String>>(line: S) -> Self {
         let line = line.into();
@@ -47,6 +52,16 @@ impl InstanceEvent {
         let s_line = StreamLine::stderr(line);
         let timestamp = s_line.extract_timestamp().unwrap_or(chrono::Utc::now());
         let payload = EventPayload::StdLine { line: s_line };
+
+        Self {
+            id: Uuid::new_v4(),
+            timestamp,
+            payload,
+        }
+    }
+
+    pub fn new(payload: EventPayload) -> Self {
+        let timestamp = chrono::Utc::now();
 
         Self {
             id: Uuid::new_v4(),
